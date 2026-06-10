@@ -1,0 +1,79 @@
+### AiDotNet host — C# / .NET benchmark API
+# Start the host first (from aidotnet-benchmarks/):  dotnet run -c Release
+# Binds https://localhost:7001 and http://localhost:7000 (Properties/launchSettings.json).
+# The dev cert is self-signed — VS Code REST Client: set "rest-client.verifySSL": false.
+#
+# CSV uploads load from ../TestData/RegressionTestData/ (paths are relative to THIS file).
+
+@host = https://localhost:7001
+
+############################################################
+# Benchmark — MLP / CNN / LSTM / Transformer
+############################################################
+
+### Readiness probe
+GET {{host}}/api/Benchmark/Test
+
+### Run the full four-model benchmark (no body) — takes minutes
+POST {{host}}/api/Benchmark/Models?models=mlp,cnn,lstm,transformer&epochs=3&trainBatches=20&batchSize=64&inferenceIterations=100&warmupIterations=10&seed=1234
+
+### Quick single-model smoke test
+POST {{host}}/api/Benchmark/Models?models=mlp
+
+############################################################
+# CSV regression
+############################################################
+
+### Readiness probe (returns "ping")
+GET {{host}}/api/Regression/Test
+
+### SimpleRegression — single feature column (Simple/SmallSet)
+# multipart boundary is declared inline; "< path" loads the file body.
+POST {{host}}/api/Regression/SimpleRegression?UseGPU=false
+Content-Type: multipart/form-data; boundary=----AiDotNetBoundary
+
+------AiDotNetBoundary
+Content-Disposition: form-data; name="features"; filename="features.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Simple/SmallSet/features.csv
+------AiDotNetBoundary
+Content-Disposition: form-data; name="tests"; filename="tests.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Simple/SmallSet/tests.csv
+------AiDotNetBoundary--
+
+### SimpleRegression — multiple feature columns (Complex/SmallSet)
+# On the AiDotNet side this same route runs MultipleRegression<double> when
+# features.csv has more than one feature column.
+POST {{host}}/api/Regression/SimpleRegression?UseGPU=false
+Content-Type: multipart/form-data; boundary=----AiDotNetBoundary
+
+------AiDotNetBoundary
+Content-Disposition: form-data; name="features"; filename="features.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/SmallSet/features.csv
+------AiDotNetBoundary
+Content-Disposition: form-data; name="tests"; filename="tests.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/SmallSet/tests.csv
+------AiDotNetBoundary--
+
+### SimpleRegression — large set (Complex/LargeSet)
+POST {{host}}/api/Regression/SimpleRegression?UseGPU=false
+Content-Type: multipart/form-data; boundary=----AiDotNetBoundary
+
+------AiDotNetBoundary
+Content-Disposition: form-data; name="features"; filename="features.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/LargeSet/features.csv
+------AiDotNetBoundary
+Content-Disposition: form-data; name="tests"; filename="tests.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/LargeSet/tests.csv
+------AiDotNetBoundary--

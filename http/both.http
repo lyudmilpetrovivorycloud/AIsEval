@@ -1,0 +1,62 @@
+### Both — fan-out routes (served by the AiDotNet host)
+# These drive BOTH frameworks from one call and return the two responses side by side.
+# Start BOTH hosts before calling:
+#   terminal 1 (aidotnet-benchmarks):  dotnet run -c Release
+#   terminal 2 (pytorch-benchmarks):   python -m uvicorn pytorch_benchmarks.api:app --host 127.0.0.1 --port 8000
+#
+# Self-signed dev cert — VS Code REST Client: set "rest-client.verifySSL": false.
+
+############################################################
+# Benchmark fan-out
+############################################################
+# /api/Both/Benchmark calls THIS host's /api/Benchmark/Models (via the request's
+# own scheme/host) and the PyTorch host at http://localhost:8000, sequentially.
+
+@host = https://localhost:7001
+
+### Run the four-model benchmark on both frameworks (no body) — minutes per side
+POST {{host}}/api/Both/Benchmark?models=mlp,cnn,lstm,transformer
+
+### Quick single-model fan-out
+POST {{host}}/api/Both/Benchmark?models=mlp
+
+############################################################
+# Regression fan-out
+############################################################
+# IMPORTANT: /api/Both/SimpleRegression forwards to a HARDCODED AiDotNet endpoint
+# at https://localhost:50724 (and PyTorch at http://localhost:8000). Start the
+# AiDotNet host on that port for this route:
+#   dotnet run -c Release --urls https://localhost:50724
+@bothHost = https://localhost:50724
+
+### SimpleRegression on both frameworks (Simple/SmallSet)
+POST {{bothHost}}/api/Both/SimpleRegression?UseGPU=false
+Content-Type: multipart/form-data; boundary=----BothBoundary
+
+------BothBoundary
+Content-Disposition: form-data; name="features"; filename="features.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Simple/SmallSet/features.csv
+------BothBoundary
+Content-Disposition: form-data; name="tests"; filename="tests.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Simple/SmallSet/tests.csv
+------BothBoundary--
+
+### SimpleRegression on both frameworks (Complex/SmallSet)
+POST {{bothHost}}/api/Both/SimpleRegression?UseGPU=false
+Content-Type: multipart/form-data; boundary=----BothBoundary
+
+------BothBoundary
+Content-Disposition: form-data; name="features"; filename="features.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/SmallSet/features.csv
+------BothBoundary
+Content-Disposition: form-data; name="tests"; filename="tests.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/SmallSet/tests.csv
+------BothBoundary--

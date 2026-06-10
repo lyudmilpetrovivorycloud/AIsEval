@@ -1,0 +1,77 @@
+### PyTorch host — Python / FastAPI benchmark API
+# Start the host first (from pytorch-benchmarks/, venv active):
+#   python -m uvicorn pytorch_benchmarks.api:app --host 127.0.0.1 --port 8000
+#
+# CSV uploads load from ../TestData/RegressionTestData/ (paths are relative to THIS file).
+
+@host = http://localhost:8000
+
+############################################################
+# Benchmark — MLP / CNN / LSTM / Transformer
+############################################################
+
+### Readiness probe
+GET {{host}}/api/Benchmark/Test
+
+### Run the full four-model benchmark (no body) — takes minutes
+POST {{host}}/api/Benchmark/Models?models=mlp,cnn,lstm,transformer&epochs=3&trainBatches=20&batchSize=64&inferenceIterations=100&warmupIterations=10&seed=1234&device=cpu&threads=8
+
+### Quick single-model smoke test
+POST {{host}}/api/Benchmark/Models?models=mlp
+
+############################################################
+# CSV regression
+############################################################
+
+### Readiness probe (returns "ping")
+GET {{host}}/api/Regression/Test
+
+### MultipleRegression — framework-symmetric (nn.Linear + MSELoss + Adam)
+# Use THIS route for apples-to-apples comparison against the AiDotNet side.
+POST {{host}}/api/Regression/MultipleRegression?UseGPU=false
+Content-Type: multipart/form-data; boundary=----PyTorchBoundary
+
+------PyTorchBoundary
+Content-Disposition: form-data; name="features"; filename="features.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/SmallSet/features.csv
+------PyTorchBoundary
+Content-Disposition: form-data; name="tests"; filename="tests.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/SmallSet/tests.csv
+------PyTorchBoundary--
+
+### SimpleRegression — alias of /Predict (raw torch.linalg.lstsq / LAPACK)
+# NOT a framework-vs-framework comparison; preserved for LAPACK profiling.
+POST {{host}}/api/Regression/SimpleRegression?UseGPU=false
+Content-Type: multipart/form-data; boundary=----PyTorchBoundary
+
+------PyTorchBoundary
+Content-Disposition: form-data; name="features"; filename="features.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Simple/SmallSet/features.csv
+------PyTorchBoundary
+Content-Disposition: form-data; name="tests"; filename="tests.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Simple/SmallSet/tests.csv
+------PyTorchBoundary--
+
+### Predict — raw torch.linalg.lstsq (same handler as SimpleRegression)
+POST {{host}}/api/Regression/Predict?UseGPU=false
+Content-Type: multipart/form-data; boundary=----PyTorchBoundary
+
+------PyTorchBoundary
+Content-Disposition: form-data; name="features"; filename="features.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/LargeSet/features.csv
+------PyTorchBoundary
+Content-Disposition: form-data; name="tests"; filename="tests.csv"
+Content-Type: text/csv
+
+< ../TestData/RegressionTestData/Complex/LargeSet/tests.csv
+------PyTorchBoundary--
