@@ -18,7 +18,8 @@ internal sealed record BenchmarkOptions(
     int InferenceIterations = 100,
     int WarmupIterations = 10,
     int Seed = 1234,
-    int ProbeBatchSize = 4);
+    int ProbeBatchSize = 4,
+    int EvalSamples = 128);
 
 internal sealed class BenchmarkRunner(BenchmarkOptions options)
 {
@@ -266,7 +267,29 @@ internal sealed class BenchmarkRunner(BenchmarkOptions options)
             logits[b] = new float[classes];
             Array.Copy(flat, b * classes, logits[b], 0, classes);
         }
-        return new ModelOutputsReport(options.ProbeBatchSize, options.Seed, shape, logits);
+
+        // Argmax accuracy on the shared deterministic eval set (same inputs AND
+        // labels on the PyTorch side). With random-label synthetic training data
+        // both frameworks should land near chance (1/classes) — the value of the
+        // metric is the cross-framework PARITY, not the absolute score.
+        double? accuracy = null;
+        if (options.EvalSamples > 0)
+        {
+            var (evalInputs, evalLabels) = DeterministicEvalSet(options.EvalSamples, sampleSize, classes, options.Seed);
+            var evalFlat = model.PredictOn(evalInputs, options.EvalSamples);
+            var correct = 0;
+            for (var s = 0; s < options.EvalSamples; s++)
+            {
+                // First-max argmax, matching torch.argmax's tie-breaking.
+                var best = 0;
+                for (var c = 1; c < classes; c++)
+                    if (evalFlat[s * classes + c] > evalFlat[s * classes + best]) best = c;
+                if (best == evalLabels[s]) correct++;
+            }
+            accuracy = Math.Round((double)correct / options.EvalSamples, 6);
+        }
+
+        return new ModelOutputsReport(options.ProbeBatchSize, options.Seed, shape, logits, options.EvalSamples, accuracy);
     }
 
     /// <summary>
@@ -286,6 +309,33 @@ internal sealed class BenchmarkRunner(BenchmarkOptions options)
             values[i] = (float)(state / 4294967296.0);
         }
         return values;
+    }
+
+    /// <summary>
+    /// Deterministic labeled eval set for the accuracy score: per sample,
+    /// <c>sampleSize</c> input values then one label (state % classes), all from
+    /// one LCG stream seeded with <c>seed ^ 0xA5A5A5A5</c> so it never overlaps
+    /// the probe stream. MUST stay in lockstep with deterministic_eval_set in
+    /// pytorch-benchmarks' __main__.py — identical inputs AND labels on both
+    /// frameworks is what makes the accuracy numbers comparable.
+    /// </summary>
+    private static (float[] Inputs, int[] Labels) DeterministicEvalSet(int samples, int sampleSize, int classes, int seed)
+    {
+        var inputs = new float[samples * sampleSize];
+        var labels = new int[samples];
+        var state = (uint)seed ^ 0xA5A5A5A5u;
+        var idx = 0;
+        for (var s = 0; s < samples; s++)
+        {
+            for (var i = 0; i < sampleSize; i++)
+            {
+                state = unchecked(state * 1664525u + 1013904223u);
+                inputs[idx++] = (float)(state / 4294967296.0);
+            }
+            state = unchecked(state * 1664525u + 1013904223u);
+            labels[s] = (int)(state % (uint)classes);
+        }
+        return (inputs, labels);
     }
 
     private static double Round6(double value) => Math.Round(value, 6);
@@ -380,10 +430,12 @@ public sealed record BenchmarkReport(string Framework, string DotNetRuntime, obj
 public sealed record ModelReport(string Model, string Backend, long Parameters, TrainingReport Training, List<InferenceReport> Inference, ModelOutputsReport? Outputs);
 /// <summary>
 /// The trained model's raw forward-pass outputs (logits, no softmax) on the
-/// deterministic probe batch — the PyTorch report carries the same section
-/// under the same probe, so the two frameworks' values can be diffed directly.
+/// deterministic probe batch, plus its argmax accuracy on the deterministic
+/// labeled eval set — the PyTorch report carries the same section computed
+/// from bit-identical probe/eval data, so the two frameworks' values can be
+/// diffed directly. Accuracy is null when EvalSamples is 0.
 /// </summary>
-public sealed record ModelOutputsReport(int ProbeBatchSize, int ProbeSeed, int[] ProbeShape, float[][] Logits);
+public sealed record ModelOutputsReport(int ProbeBatchSize, int ProbeSeed, int[] ProbeShape, float[][] Logits, int EvalSamples, double? Accuracy);
 public sealed record TrainingReport(double[] EpochSeconds, double TotalSeconds, double GradientSecondsAvg, double DataLoadingSecondsAvg, ResourceReport Resources);
 public sealed record ResourceReport(double ManagedRssMbPeak, string? NvidiaSmiSample);
 public sealed record InferenceReport(int BatchSize, double WarmupSecondsAvg, double SteadyStateLatencyMsAvg, double SteadyStateLatencyMsP95, double ThroughputSamplesPerSecond, double MemoryMbPeak);

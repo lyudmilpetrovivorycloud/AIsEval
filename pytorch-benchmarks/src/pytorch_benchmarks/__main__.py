@@ -51,15 +51,18 @@ class InferenceBatchResult:
 @dataclass
 class ModelOutputsResult:
     """Trained model's raw forward-pass outputs (logits, no softmax) on the
-    deterministic probe batch. The AiDotNet report carries the same section
-    (``outputs``: probeBatchSize/probeSeed/probeShape/logits) computed from a
-    bit-identical probe, so the two frameworks' values can be diffed directly
-    to evaluate cross-framework deviation."""
+    deterministic probe batch, plus its argmax accuracy on the deterministic
+    labeled eval set. The AiDotNet report carries the same section computed
+    from bit-identical probe/eval data, so the two frameworks' values can be
+    diffed directly to evaluate cross-framework deviation. ``accuracy`` is
+    None when ``eval_samples`` is 0."""
 
     probe_batch_size: int
     probe_seed: int
     probe_shape: list[int]
     logits: list[list[float]]
+    eval_samples: int
+    accuracy: float | None
 
 
 @dataclass
@@ -295,27 +298,62 @@ def deterministic_probe(count: int, seed: int) -> list[float]:
     return values
 
 
+def deterministic_eval_set(samples: int, sample_size: int, classes: int, seed: int) -> tuple[list[float], list[int]]:
+    """Deterministic labeled eval set for the accuracy score: per sample,
+    ``sample_size`` input values then one label (state % classes), all from one
+    LCG stream seeded with ``seed ^ 0xA5A5A5A5`` so it never overlaps the probe
+    stream. MUST stay in lockstep with DeterministicEvalSet in the AiDotNet
+    side's BenchmarkRunner.cs — identical inputs AND labels on both frameworks
+    is what makes the accuracy numbers comparable."""
+    state = (seed ^ 0xA5A5A5A5) & 0xFFFFFFFF
+    inputs: list[float] = []
+    labels: list[int] = []
+    for _ in range(samples):
+        for _ in range(sample_size):
+            state = (state * 1664525 + 1013904223) & 0xFFFFFFFF
+            inputs.append(state / 4294967296.0)
+        state = (state * 1664525 + 1013904223) & 0xFFFFFFFF
+        labels.append(state % classes)
+    return inputs, labels
+
+
 @torch.inference_mode()
 def capture_outputs(
     model: nn.Module,
     shape: tuple[int, ...],
     device: torch.device,
     probe_batch_size: int,
+    eval_samples: int,
     seed: int,
 ) -> ModelOutputsResult | None:
     """Run the trained model on the deterministic probe batch and record its
-    raw logits, so the report can be diffed value-for-value against the
-    AiDotNet report's ``outputs`` section (same probe, same seed)."""
+    raw logits, plus its argmax accuracy on the deterministic labeled eval
+    set, so the report can be diffed value-for-value against the AiDotNet
+    report's ``outputs`` section (same probe, same eval data, same seed)."""
     if probe_batch_size < 1:
         return None
     values = deterministic_probe(probe_batch_size * math.prod(shape), seed)
     x = torch.tensor(values, dtype=torch.float32, device=device).view(probe_batch_size, *shape)
     logits = model(x)
+
+    # With random-label synthetic training data both frameworks should land
+    # near chance (1/classes) — the value of the metric is the cross-framework
+    # PARITY, not the absolute score.
+    accuracy: float | None = None
+    if eval_samples > 0:
+        classes = logits.shape[1]
+        inputs, labels = deterministic_eval_set(eval_samples, math.prod(shape), classes, seed)
+        x_eval = torch.tensor(inputs, dtype=torch.float32, device=device).view(eval_samples, *shape)
+        predictions = model(x_eval).argmax(dim=1).cpu().tolist()
+        accuracy = round(sum(int(p == l) for p, l in zip(predictions, labels)) / eval_samples, 6)
+
     return ModelOutputsResult(
         probe_batch_size=probe_batch_size,
         probe_seed=seed,
         probe_shape=list(shape),
         logits=logits.cpu().tolist(),
+        eval_samples=eval_samples,
+        accuracy=accuracy,
     )
 
 
@@ -343,7 +381,9 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         training = benchmark_training(model, shape, device, args.epochs, args.train_batches, args.batch_size)
         model.eval()
         inference = benchmark_inference(model, shape, device, args.inference_iterations, args.warmup_iterations)
-        outputs = capture_outputs(model, shape, device, getattr(args, "probe_batch_size", 4), seed)
+        outputs = capture_outputs(
+            model, shape, device,
+            getattr(args, "probe_batch_size", 4), getattr(args, "eval_samples", 128), seed)
         model_results.append(ModelResult(name, str(device), parameters, training, inference, outputs))
 
     return {
@@ -371,6 +411,10 @@ def main() -> None:
                         help="Samples in the deterministic probe batch whose post-training logits "
                              "are reported per model (the outputs section) for cross-framework "
                              "deviation analysis against AiDotNet. 0 disables output capture.")
+    parser.add_argument("--eval-samples", type=int, default=128,
+                        help="Samples in the deterministic labeled eval set used for the per-model "
+                             "argmax accuracy score (bit-identical inputs+labels on the AiDotNet "
+                             "side, so the scores are directly comparable). 0 disables accuracy.")
     parser.add_argument("--threads", type=int, default=0,
                         help="Pin CPU thread count (0 = PyTorch default = all cores). "
                              "Match the AiDotNet side's AIDOTNET_BLAS_THREADS for a fair comparison.")

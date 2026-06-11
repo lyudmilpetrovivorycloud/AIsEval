@@ -43,6 +43,7 @@ def models(
     warmupIterations: int = 10,
     seed: int = 1234,
     probeBatchSize: int = 4,
+    evalSamples: int = 128,
     device: str = "cpu",
     threads: int = 8,
 ) -> JSONResponse:
@@ -59,6 +60,11 @@ def models(
     on both frameworks, derived from ``seed``) and its raw logits are included
     in the report so AiDotNet-vs-PyTorch output deviation can be evaluated.
     0 disables output capture.
+
+    ``evalSamples`` controls the argmax accuracy score inside that section,
+    computed on a deterministic labeled eval set (inputs AND labels
+    bit-identical on both frameworks). 0 disables the accuracy score; the
+    section as a whole still requires ``probeBatchSize`` > 0.
     """
     names = [item.strip() for item in models.split(",") if item.strip()]
     if not names:
@@ -75,6 +81,11 @@ def models(
         return JSONResponse(
             status_code=400,
             content={"error": "probeBatchSize must be >= 0 (0 disables model-output capture)."},
+        )
+    if evalSamples < 0:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "evalSamples must be >= 0 (0 disables the accuracy score)."},
         )
 
     if not _run_gate.acquire(blocking=False):
@@ -96,6 +107,7 @@ def models(
             warmup_iterations=warmupIterations,
             seed=seed,
             probe_batch_size=probeBatchSize,
+            eval_samples=evalSamples,
             threads=threads,
         )
         try:

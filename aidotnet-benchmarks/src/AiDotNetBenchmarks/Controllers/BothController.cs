@@ -63,11 +63,13 @@ public sealed class BothController : ControllerBase
         [FromQuery] int inferenceIterations = 100,
         [FromQuery] int warmupIterations = 10,
         [FromQuery] int seed = 1234,
-        [FromQuery] int probeBatchSize = 4)
+        [FromQuery] int probeBatchSize = 4,
+        [FromQuery] int evalSamples = 128)
     {
         var query = $"?models={Uri.EscapeDataString(models)}&epochs={epochs}&trainBatches={trainBatches}" +
                     $"&batchSize={batchSize}&inferenceIterations={inferenceIterations}" +
-                    $"&warmupIterations={warmupIterations}&seed={seed}&probeBatchSize={probeBatchSize}";
+                    $"&warmupIterations={warmupIterations}&seed={seed}&probeBatchSize={probeBatchSize}" +
+                    $"&evalSamples={evalSamples}";
 
         // The AiDotNet side is THIS host's own BenchmarkController — address it
         // via the incoming request's scheme/host instead of a hardcoded port, so

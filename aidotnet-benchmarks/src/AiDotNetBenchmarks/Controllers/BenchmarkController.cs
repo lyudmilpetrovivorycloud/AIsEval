@@ -46,6 +46,13 @@ public sealed class BenchmarkController : ControllerBase
     /// reports' logits can be diffed to evaluate cross-framework deviation.
     /// 0 disables output capture.
     /// </param>
+    /// <param name="evalSamples">
+    /// Samples in the deterministic labeled eval set used for the per-model
+    /// argmax accuracy score in the <c>outputs</c> section. Inputs AND labels
+    /// are bit-identical on the PyTorch side (same seed), so the accuracy
+    /// numbers are directly comparable. 0 disables the accuracy score; the
+    /// section as a whole still requires probeBatchSize &gt; 0.
+    /// </param>
     [HttpPost("Models")]
     public async Task<ActionResult<BenchmarkReport>> Models(
         [FromQuery] string models = "mlp,cnn,lstm,transformer",
@@ -55,7 +62,8 @@ public sealed class BenchmarkController : ControllerBase
         [FromQuery] int inferenceIterations = 100,
         [FromQuery] int warmupIterations = 10,
         [FromQuery] int seed = 1234,
-        [FromQuery] int probeBatchSize = 4)
+        [FromQuery] int probeBatchSize = 4,
+        [FromQuery] int evalSamples = 128)
     {
         var modelNames = models.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (modelNames.Length == 0)
@@ -64,6 +72,8 @@ public sealed class BenchmarkController : ControllerBase
             return BadRequest(new { error = "Workload parameters must be positive (warmupIterations may be 0)." });
         if (probeBatchSize < 0)
             return BadRequest(new { error = "probeBatchSize must be >= 0 (0 disables model-output capture)." });
+        if (evalSamples < 0)
+            return BadRequest(new { error = "evalSamples must be >= 0 (0 disables the accuracy score)." });
 
         if (!await RunGate.WaitAsync(TimeSpan.Zero, HttpContext.RequestAborted))
         {
@@ -76,7 +86,7 @@ public sealed class BenchmarkController : ControllerBase
         try
         {
             var options = new BenchmarkOptions(
-                modelNames, epochs, trainBatches, batchSize, inferenceIterations, warmupIterations, seed, probeBatchSize);
+                modelNames, epochs, trainBatches, batchSize, inferenceIterations, warmupIterations, seed, probeBatchSize, evalSamples);
             // The runner is CPU-bound for minutes; keep it off the request thread
             // so Kestrel's loop stays responsive.
             var report = await Task.Run(() => new BenchmarkRunner(options).Run(), HttpContext.RequestAborted);
