@@ -39,6 +39,13 @@ public sealed class BenchmarkController : ControllerBase
     /// <param name="inferenceIterations">Steady-state inference iterations per batch size.</param>
     /// <param name="warmupIterations">Warmup iterations before the steady-state window.</param>
     /// <param name="seed">Deterministic synthetic-data seed.</param>
+    /// <param name="probeBatchSize">
+    /// Samples in the deterministic probe batch whose post-training logits are
+    /// included in each model's report (the <c>outputs</c> section). The PyTorch
+    /// side generates the bit-identical probe from the same seed, so the two
+    /// reports' logits can be diffed to evaluate cross-framework deviation.
+    /// 0 disables output capture.
+    /// </param>
     [HttpPost("Models")]
     public async Task<ActionResult<BenchmarkReport>> Models(
         [FromQuery] string models = "mlp,cnn,lstm,transformer",
@@ -47,13 +54,16 @@ public sealed class BenchmarkController : ControllerBase
         [FromQuery] int batchSize = 64,
         [FromQuery] int inferenceIterations = 100,
         [FromQuery] int warmupIterations = 10,
-        [FromQuery] int seed = 1234)
+        [FromQuery] int seed = 1234,
+        [FromQuery] int probeBatchSize = 4)
     {
         var modelNames = models.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (modelNames.Length == 0)
             return BadRequest(new { error = "Provide at least one model: mlp, cnn, lstm, transformer, mlp-fused." });
         if (epochs < 1 || trainBatches < 1 || batchSize < 1 || inferenceIterations < 1 || warmupIterations < 0)
             return BadRequest(new { error = "Workload parameters must be positive (warmupIterations may be 0)." });
+        if (probeBatchSize < 0)
+            return BadRequest(new { error = "probeBatchSize must be >= 0 (0 disables model-output capture)." });
 
         if (!await RunGate.WaitAsync(TimeSpan.Zero, HttpContext.RequestAborted))
         {
@@ -66,7 +76,7 @@ public sealed class BenchmarkController : ControllerBase
         try
         {
             var options = new BenchmarkOptions(
-                modelNames, epochs, trainBatches, batchSize, inferenceIterations, warmupIterations, seed);
+                modelNames, epochs, trainBatches, batchSize, inferenceIterations, warmupIterations, seed, probeBatchSize);
             // The runner is CPU-bound for minutes; keep it off the request thread
             // so Kestrel's loop stays responsive.
             var report = await Task.Run(() => new BenchmarkRunner(options).Run(), HttpContext.RequestAborted);

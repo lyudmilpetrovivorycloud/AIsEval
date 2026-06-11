@@ -42,6 +42,7 @@ def models(
     inferenceIterations: int = 100,
     warmupIterations: int = 10,
     seed: int = 1234,
+    probeBatchSize: int = 4,
     device: str = "cpu",
     threads: int = 8,
 ) -> JSONResponse:
@@ -52,6 +53,12 @@ def models(
     ``device`` defaults to ``cpu`` and ``threads`` to 8 — the fair-comparison
     defaults (the AiDotNet side pins its CPU engine and
     ``AIDOTNET_BLAS_THREADS=8``).
+
+    ``probeBatchSize`` controls the per-model ``outputs`` section: after
+    training, the model is run on a deterministic probe batch (bit-identical
+    on both frameworks, derived from ``seed``) and its raw logits are included
+    in the report so AiDotNet-vs-PyTorch output deviation can be evaluated.
+    0 disables output capture.
     """
     names = [item.strip() for item in models.split(",") if item.strip()]
     if not names:
@@ -63,6 +70,11 @@ def models(
         return JSONResponse(
             status_code=400,
             content={"error": "Workload parameters must be positive (warmupIterations may be 0)."},
+        )
+    if probeBatchSize < 0:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "probeBatchSize must be >= 0 (0 disables model-output capture)."},
         )
 
     if not _run_gate.acquire(blocking=False):
@@ -83,6 +95,7 @@ def models(
             inference_iterations=inferenceIterations,
             warmup_iterations=warmupIterations,
             seed=seed,
+            probe_batch_size=probeBatchSize,
             threads=threads,
         )
         try:

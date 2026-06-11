@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import platform
 import random
@@ -48,12 +49,27 @@ class InferenceBatchResult:
 
 
 @dataclass
+class ModelOutputsResult:
+    """Trained model's raw forward-pass outputs (logits, no softmax) on the
+    deterministic probe batch. The AiDotNet report carries the same section
+    (``outputs``: probeBatchSize/probeSeed/probeShape/logits) computed from a
+    bit-identical probe, so the two frameworks' values can be diffed directly
+    to evaluate cross-framework deviation."""
+
+    probe_batch_size: int
+    probe_seed: int
+    probe_shape: list[int]
+    logits: list[list[float]]
+
+
+@dataclass
 class ModelResult:
     model: str
     device: str
     parameters: int
     training: TrainingResult
     inference: list[InferenceBatchResult]
+    outputs: ModelOutputsResult | None
 
 
 class ResourceMonitor:
@@ -265,6 +281,44 @@ def benchmark_inference(model: nn.Module, shape: tuple[int, ...], device: torch.
     return results
 
 
+def deterministic_probe(count: int, seed: int) -> list[float]:
+    """Portable deterministic values in [0, 1): 32-bit LCG with the Numerical
+    Recipes constants, state advanced once per value, value = state / 2**32
+    narrowed to float32. MUST stay in lockstep with DeterministicProbe in the
+    AiDotNet side's BenchmarkRunner.cs — both frameworks feeding the same
+    bytes is the whole point of the outputs section."""
+    state = seed & 0xFFFFFFFF
+    values: list[float] = []
+    for _ in range(count):
+        state = (state * 1664525 + 1013904223) & 0xFFFFFFFF
+        values.append(state / 4294967296.0)
+    return values
+
+
+@torch.inference_mode()
+def capture_outputs(
+    model: nn.Module,
+    shape: tuple[int, ...],
+    device: torch.device,
+    probe_batch_size: int,
+    seed: int,
+) -> ModelOutputsResult | None:
+    """Run the trained model on the deterministic probe batch and record its
+    raw logits, so the report can be diffed value-for-value against the
+    AiDotNet report's ``outputs`` section (same probe, same seed)."""
+    if probe_batch_size < 1:
+        return None
+    values = deterministic_probe(probe_batch_size * math.prod(shape), seed)
+    x = torch.tensor(values, dtype=torch.float32, device=device).view(probe_batch_size, *shape)
+    logits = model(x)
+    return ModelOutputsResult(
+        probe_batch_size=probe_batch_size,
+        probe_seed=seed,
+        probe_shape=list(shape),
+        logits=logits.cpu().tolist(),
+    )
+
+
 def run(args: argparse.Namespace) -> dict[str, object]:
     seed = args.seed
     random.seed(seed)
@@ -289,7 +343,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         training = benchmark_training(model, shape, device, args.epochs, args.train_batches, args.batch_size)
         model.eval()
         inference = benchmark_inference(model, shape, device, args.inference_iterations, args.warmup_iterations)
-        model_results.append(ModelResult(name, str(device), parameters, training, inference))
+        outputs = capture_outputs(model, shape, device, getattr(args, "probe_batch_size", 4), seed)
+        model_results.append(ModelResult(name, str(device), parameters, training, inference, outputs))
 
     return {
         "framework": "PyTorch",
@@ -312,6 +367,10 @@ def main() -> None:
     parser.add_argument("--inference-iterations", type=int, default=100)
     parser.add_argument("--warmup-iterations", type=int, default=10)
     parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument("--probe-batch-size", type=int, default=4,
+                        help="Samples in the deterministic probe batch whose post-training logits "
+                             "are reported per model (the outputs section) for cross-framework "
+                             "deviation analysis against AiDotNet. 0 disables output capture.")
     parser.add_argument("--threads", type=int, default=0,
                         help="Pin CPU thread count (0 = PyTorch default = all cores). "
                              "Match the AiDotNet side's AIDOTNET_BLAS_THREADS for a fair comparison.")

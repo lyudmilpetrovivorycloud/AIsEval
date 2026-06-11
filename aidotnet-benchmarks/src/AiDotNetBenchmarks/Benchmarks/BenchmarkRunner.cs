@@ -17,7 +17,8 @@ internal sealed record BenchmarkOptions(
     int BatchSize = 64,
     int InferenceIterations = 100,
     int WarmupIterations = 10,
-    int Seed = 1234);
+    int Seed = 1234,
+    int ProbeBatchSize = 4);
 
 internal sealed class BenchmarkRunner(BenchmarkOptions options)
 {
@@ -50,9 +51,10 @@ internal sealed class BenchmarkRunner(BenchmarkOptions options)
             var training = BenchmarkTraining(model);
             Console.WriteLine($"[bench] {modelName}: training done in {training.TotalSeconds:F2}s; running inference…");
             var inference = BenchmarkInference(model);
+            var outputs = CaptureOutputs(model);
             modelStart.Stop();
             Console.WriteLine($"[bench] {modelName}: complete in {modelStart.Elapsed.TotalSeconds:F2}s");
-            results.Add(new ModelReport(modelName, "AiDotNetNeuralNetwork", model.ParameterCount, training, inference));
+            results.Add(new ModelReport(modelName, "AiDotNetNeuralNetwork", model.ParameterCount, training, inference, outputs));
         }
 
         return new BenchmarkReport(
@@ -243,6 +245,49 @@ internal sealed class BenchmarkRunner(BenchmarkOptions options)
         return reports;
     }
 
+    /// <summary>
+    /// Capture the trained model's outputs on a deterministic probe batch.
+    /// The probe values come from a portable 32-bit LCG seeded with the run
+    /// seed, so the PyTorch side's <c>deterministic_probe</c> generates a
+    /// bit-identical input — any deviation in the reported logits is then
+    /// attributable to the frameworks (init, training, kernels), not the data.
+    /// </summary>
+    private ModelOutputsReport? CaptureOutputs(IBenchmarkModel model)
+    {
+        if (options.ProbeBatchSize < 1) return null;
+        var shape = model.SampleShape;
+        var sampleSize = shape.Aggregate(1, (a, b) => a * b);
+        var probe = DeterministicProbe(options.ProbeBatchSize * sampleSize, options.Seed);
+        var flat = model.PredictOn(probe, options.ProbeBatchSize);
+        var classes = flat.Length / options.ProbeBatchSize;
+        var logits = new float[options.ProbeBatchSize][];
+        for (var b = 0; b < options.ProbeBatchSize; b++)
+        {
+            logits[b] = new float[classes];
+            Array.Copy(flat, b * classes, logits[b], 0, classes);
+        }
+        return new ModelOutputsReport(options.ProbeBatchSize, options.Seed, shape, logits);
+    }
+
+    /// <summary>
+    /// Portable deterministic values in [0, 1): 32-bit LCG with the Numerical
+    /// Recipes constants, state advanced once per value, value = state / 2^32
+    /// computed in double then narrowed to float. MUST stay in lockstep with
+    /// deterministic_probe in pytorch-benchmarks' __main__.py — both sides
+    /// feeding the same bytes is the whole point of the outputs section.
+    /// </summary>
+    private static float[] DeterministicProbe(int count, int seed)
+    {
+        var values = new float[count];
+        var state = (uint)seed;
+        for (var i = 0; i < count; i++)
+        {
+            state = unchecked(state * 1664525u + 1013904223u);
+            values[i] = (float)(state / 4294967296.0);
+        }
+        return values;
+    }
+
     private static double Round6(double value) => Math.Round(value, 6);
 }
 
@@ -332,7 +377,13 @@ internal static class AiDotNetProbe
 
 // Public: these records are the API response body of BenchmarkController.Models.
 public sealed record BenchmarkReport(string Framework, string DotNetRuntime, object AiDotNet, List<ModelReport> Results);
-public sealed record ModelReport(string Model, string Backend, long Parameters, TrainingReport Training, List<InferenceReport> Inference);
+public sealed record ModelReport(string Model, string Backend, long Parameters, TrainingReport Training, List<InferenceReport> Inference, ModelOutputsReport? Outputs);
+/// <summary>
+/// The trained model's raw forward-pass outputs (logits, no softmax) on the
+/// deterministic probe batch — the PyTorch report carries the same section
+/// under the same probe, so the two frameworks' values can be diffed directly.
+/// </summary>
+public sealed record ModelOutputsReport(int ProbeBatchSize, int ProbeSeed, int[] ProbeShape, float[][] Logits);
 public sealed record TrainingReport(double[] EpochSeconds, double TotalSeconds, double GradientSecondsAvg, double DataLoadingSecondsAvg, ResourceReport Resources);
 public sealed record ResourceReport(double ManagedRssMbPeak, string? NvidiaSmiSample);
 public sealed record InferenceReport(int BatchSize, double WarmupSecondsAvg, double SteadyStateLatencyMsAvg, double SteadyStateLatencyMsP95, double ThroughputSamplesPerSecond, double MemoryMbPeak);

@@ -1,1 +1,250 @@
-{"framework":"AiDotNet","dotNetRuntime":"10.0.9","aiDotNet":{"loaded":true,"name":"AiDotNet","version":"0.204.0.0","neuralTypeProbe":["AiDotNet.Video.VideoNeuralNetworkBase`1","AiDotNet.UncertaintyQuantification.BayesianNeuralNetworks.BayesianNeuralNetwork`1","AiDotNet.UncertaintyQuantification.BayesianNeuralNetworks.DeepEnsemble`1","AiDotNet.UncertaintyQuantification.BayesianNeuralNetworks.MCDropoutNeuralNetwork`1","AiDotNet.TransferLearning.Algorithms.TransferNeuralNetwork`1","AiDotNet.TimeSeries.ChronosTransformerLayerTensor`1","AiDotNet.TimeSeries.DeepARLstmCellTensor`1","AiDotNet.TimeSeries.TransformerGraphHelper`1","AiDotNet.TimeSeries.NeuralNetworkARIMAModel`1","AiDotNet.TimeSeries.TemporalFusionTransformer`1","AiDotNet.TimeSeries.AnomalyDetection.LSTMVAE`1","AiDotNet.TimeSeries.AnomalyDetection.LSTMVAEOptions`1","AiDotNet.TimeSeries.AnomalyDetection.LSTMEncoderTensor`1","AiDotNet.TimeSeries.AnomalyDetection.LSTMDecoderTensor`1","AiDotNet.TextToSpeech.ProprietaryAPI.AzureNeuralTTS`1","AiDotNet.TextToSpeech.ProprietaryAPI.AzureNeuralTTSOptions","AiDotNet.TextToSpeech.Classic.TransformerTTS`1","AiDotNet.TextToSpeech.Classic.TransformerTTSOptions","AiDotNet.SpeechRecognition.ConformerFamily.ConvTransformer`1","AiDotNet.SpeechRecognition.ConformerFamily.ConvTransformerOptions","AiDotNet.Safety.Watermarking.NeuralImageWatermarker`1","AiDotNet.RetrievalAugmentedGeneration.Generators.NeuralGenerator`1","AiDotNet.RetrievalAugmentedGeneration.EmbeddingModels.LocalTransformerEmbedding`1","AiDotNet.RetrievalAugmentedGeneration.EmbeddingModels.ONNXSentenceTransformer`1","AiDotNet.RetrievalAugmentedGeneration.EmbeddingModels.SentenceTransformersFineTuner`1"]},"results":[{"model":"mlp","backend":"AiDotNetNeuralNetwork","parameters":468874,"training":{"epochSeconds":[0.229167,0.223941,0.251873],"totalSeconds":0.705032,"gradientSecondsAvg":0.011071,"dataLoadingSecondsAvg":0.000675,"resources":{"managedRssMbPeak":1009.527,"nvidiaSmiSample":null}},"inference":[{"batchSize":1,"warmupSecondsAvg":0.002669,"steadyStateLatencyMsAvg":0.178,"steadyStateLatencyMsP95":0.225,"throughputSamplesPerSecond":5610.256,"memoryMbPeak":870.305},{"batchSize":8,"warmupSecondsAvg":0.003428,"steadyStateLatencyMsAvg":0.257,"steadyStateLatencyMsP95":0.359,"throughputSamplesPerSecond":31083.654,"memoryMbPeak":871.668},{"batchSize":32,"warmupSecondsAvg":0.004881,"steadyStateLatencyMsAvg":0.772,"steadyStateLatencyMsP95":1.706,"throughputSamplesPerSecond":41455.019,"memoryMbPeak":874.367},{"batchSize":128,"warmupSecondsAvg":0.010754,"steadyStateLatencyMsAvg":0.956,"steadyStateLatencyMsP95":1.524,"throughputSamplesPerSecond":133943.474,"memoryMbPeak":875.602}]},{"model":"cnn","backend":"AiDotNetNeuralNetwork","parameters":20490,"training":{"epochSeconds":[0.743069,0.685769,0.612074],"totalSeconds":2.040952,"gradientSecondsAvg":0.033528,"dataLoadingSecondsAvg":0.000484,"resources":{"managedRssMbPeak":1069.434,"nvidiaSmiSample":null}},"inference":[{"batchSize":1,"warmupSecondsAvg":0.000353,"steadyStateLatencyMsAvg":0.506,"steadyStateLatencyMsP95":0.791,"throughputSamplesPerSecond":1974.766,"memoryMbPeak":1048.035},{"batchSize":8,"warmupSecondsAvg":0.000893,"steadyStateLatencyMsAvg":1.434,"steadyStateLatencyMsP95":2.944,"throughputSamplesPerSecond":5577.004,"memoryMbPeak":1048.441},{"batchSize":32,"warmupSecondsAvg":0.005055,"steadyStateLatencyMsAvg":5.168,"steadyStateLatencyMsP95":6.4,"throughputSamplesPerSecond":6191.374,"memoryMbPeak":1049.414},{"batchSize":128,"warmupSecondsAvg":0.01439,"steadyStateLatencyMsAvg":14.989,"steadyStateLatencyMsP95":18.09,"throughputSamplesPerSecond":8539.313,"memoryMbPeak":1058.797}]},{"model":"lstm","backend":"AiDotNetNeuralNetwork","parameters":24832,"training":{"epochSeconds":[1.603655,1.400438,1.709732],"totalSeconds":4.713862,"gradientSecondsAvg":0.077923,"dataLoadingSecondsAvg":0.000637,"resources":{"managedRssMbPeak":1721.246,"nvidiaSmiSample":null}},"inference":[{"batchSize":1,"warmupSecondsAvg":0.000214,"steadyStateLatencyMsAvg":0.411,"steadyStateLatencyMsP95":0.637,"throughputSamplesPerSecond":2431.28,"memoryMbPeak":1642.02},{"batchSize":8,"warmupSecondsAvg":0.000848,"steadyStateLatencyMsAvg":1.048,"steadyStateLatencyMsP95":1.729,"throughputSamplesPerSecond":7629.962,"memoryMbPeak":1636.461},{"batchSize":32,"warmupSecondsAvg":0.001808,"steadyStateLatencyMsAvg":2.034,"steadyStateLatencyMsP95":4.286,"throughputSamplesPerSecond":15732.57,"memoryMbPeak":1648.418},{"batchSize":128,"warmupSecondsAvg":0.004639,"steadyStateLatencyMsAvg":4.715,"steadyStateLatencyMsP95":6.069,"throughputSamplesPerSecond":27145.83,"memoryMbPeak":1705.191}]},{"model":"transformer","backend":"AiDotNetNeuralNetwork","parameters":35520,"training":{"epochSeconds":[2.602812,1.799056,1.645819],"totalSeconds":6.047759,"gradientSecondsAvg":0.099984,"dataLoadingSecondsAvg":0.000807,"resources":{"managedRssMbPeak":2100.805,"nvidiaSmiSample":null}},"inference":[{"batchSize":1,"warmupSecondsAvg":0.000487,"steadyStateLatencyMsAvg":0.763,"steadyStateLatencyMsP95":1.441,"throughputSamplesPerSecond":1310.678,"memoryMbPeak":1706.996},{"batchSize":8,"warmupSecondsAvg":0.001818,"steadyStateLatencyMsAvg":1.623,"steadyStateLatencyMsP95":1.949,"throughputSamplesPerSecond":4929.712,"memoryMbPeak":1806.82},{"batchSize":32,"warmupSecondsAvg":0.003554,"steadyStateLatencyMsAvg":3.866,"steadyStateLatencyMsP95":4.598,"throughputSamplesPerSecond":8276.745,"memoryMbPeak":2142.484},{"batchSize":128,"warmupSecondsAvg":0.020729,"steadyStateLatencyMsAvg":13.867,"steadyStateLatencyMsP95":23.383,"throughputSamplesPerSecond":9230.659,"memoryMbPeak":2273.535}]}]}
+{
+    "framework": "AiDotNet",
+    "dotNetRuntime": "10.0.9",
+    "aiDotNet": {
+        "loaded": true,
+        "name": "AiDotNet",
+        "version": "0.204.0.0",
+        "neuralTypeProbe": [
+            "AiDotNet.Video.VideoNeuralNetworkBase`1",
+            "AiDotNet.UncertaintyQuantification.BayesianNeuralNetworks.BayesianNeuralNetwork`1",
+            "AiDotNet.UncertaintyQuantification.BayesianNeuralNetworks.DeepEnsemble`1",
+            "AiDotNet.UncertaintyQuantification.BayesianNeuralNetworks.MCDropoutNeuralNetwork`1",
+            "AiDotNet.TransferLearning.Algorithms.TransferNeuralNetwork`1",
+            "AiDotNet.TimeSeries.ChronosTransformerLayerTensor`1",
+            "AiDotNet.TimeSeries.DeepARLstmCellTensor`1",
+            "AiDotNet.TimeSeries.TransformerGraphHelper`1",
+            "AiDotNet.TimeSeries.NeuralNetworkARIMAModel`1",
+            "AiDotNet.TimeSeries.TemporalFusionTransformer`1",
+            "AiDotNet.TimeSeries.AnomalyDetection.LSTMVAE`1",
+            "AiDotNet.TimeSeries.AnomalyDetection.LSTMVAEOptions`1",
+            "AiDotNet.TimeSeries.AnomalyDetection.LSTMEncoderTensor`1",
+            "AiDotNet.TimeSeries.AnomalyDetection.LSTMDecoderTensor`1",
+            "AiDotNet.TextToSpeech.ProprietaryAPI.AzureNeuralTTS`1",
+            "AiDotNet.TextToSpeech.ProprietaryAPI.AzureNeuralTTSOptions",
+            "AiDotNet.TextToSpeech.Classic.TransformerTTS`1",
+            "AiDotNet.TextToSpeech.Classic.TransformerTTSOptions",
+            "AiDotNet.SpeechRecognition.ConformerFamily.ConvTransformer`1",
+            "AiDotNet.SpeechRecognition.ConformerFamily.ConvTransformerOptions",
+            "AiDotNet.Safety.Watermarking.NeuralImageWatermarker`1",
+            "AiDotNet.RetrievalAugmentedGeneration.Generators.NeuralGenerator`1",
+            "AiDotNet.RetrievalAugmentedGeneration.EmbeddingModels.LocalTransformerEmbedding`1",
+            "AiDotNet.RetrievalAugmentedGeneration.EmbeddingModels.ONNXSentenceTransformer`1",
+            "AiDotNet.RetrievalAugmentedGeneration.EmbeddingModels.SentenceTransformersFineTuner`1"
+        ]
+    },
+    "results": [
+        {
+            "model": "mlp",
+            "backend": "AiDotNetNeuralNetwork",
+            "parameters": 468874,
+            "training": {
+                "epochSeconds": [
+                    0.229167,
+                    0.223941,
+                    0.251873
+                ],
+                "totalSeconds": 0.705032,
+                "gradientSecondsAvg": 0.011071,
+                "dataLoadingSecondsAvg": 0.000675,
+                "resources": {
+                    "managedRssMbPeak": 1009.527,
+                    "nvidiaSmiSample": null
+                }
+            },
+            "inference": [
+                {
+                    "batchSize": 1,
+                    "warmupSecondsAvg": 0.002669,
+                    "steadyStateLatencyMsAvg": 0.178,
+                    "steadyStateLatencyMsP95": 0.225,
+                    "throughputSamplesPerSecond": 5610.256,
+                    "memoryMbPeak": 870.305
+                },
+                {
+                    "batchSize": 8,
+                    "warmupSecondsAvg": 0.003428,
+                    "steadyStateLatencyMsAvg": 0.257,
+                    "steadyStateLatencyMsP95": 0.359,
+                    "throughputSamplesPerSecond": 31083.654,
+                    "memoryMbPeak": 871.668
+                },
+                {
+                    "batchSize": 32,
+                    "warmupSecondsAvg": 0.004881,
+                    "steadyStateLatencyMsAvg": 0.772,
+                    "steadyStateLatencyMsP95": 1.706,
+                    "throughputSamplesPerSecond": 41455.019,
+                    "memoryMbPeak": 874.367
+                },
+                {
+                    "batchSize": 128,
+                    "warmupSecondsAvg": 0.010754,
+                    "steadyStateLatencyMsAvg": 0.956,
+                    "steadyStateLatencyMsP95": 1.524,
+                    "throughputSamplesPerSecond": 133943.474,
+                    "memoryMbPeak": 875.602
+                }
+            ]
+        },
+        {
+            "model": "cnn",
+            "backend": "AiDotNetNeuralNetwork",
+            "parameters": 20490,
+            "training": {
+                "epochSeconds": [
+                    0.743069,
+                    0.685769,
+                    0.612074
+                ],
+                "totalSeconds": 2.040952,
+                "gradientSecondsAvg": 0.033528,
+                "dataLoadingSecondsAvg": 0.000484,
+                "resources": {
+                    "managedRssMbPeak": 1069.434,
+                    "nvidiaSmiSample": null
+                }
+            },
+            "inference": [
+                {
+                    "batchSize": 1,
+                    "warmupSecondsAvg": 0.000353,
+                    "steadyStateLatencyMsAvg": 0.506,
+                    "steadyStateLatencyMsP95": 0.791,
+                    "throughputSamplesPerSecond": 1974.766,
+                    "memoryMbPeak": 1048.035
+                },
+                {
+                    "batchSize": 8,
+                    "warmupSecondsAvg": 0.000893,
+                    "steadyStateLatencyMsAvg": 1.434,
+                    "steadyStateLatencyMsP95": 2.944,
+                    "throughputSamplesPerSecond": 5577.004,
+                    "memoryMbPeak": 1048.441
+                },
+                {
+                    "batchSize": 32,
+                    "warmupSecondsAvg": 0.005055,
+                    "steadyStateLatencyMsAvg": 5.168,
+                    "steadyStateLatencyMsP95": 6.4,
+                    "throughputSamplesPerSecond": 6191.374,
+                    "memoryMbPeak": 1049.414
+                },
+                {
+                    "batchSize": 128,
+                    "warmupSecondsAvg": 0.01439,
+                    "steadyStateLatencyMsAvg": 14.989,
+                    "steadyStateLatencyMsP95": 18.09,
+                    "throughputSamplesPerSecond": 8539.313,
+                    "memoryMbPeak": 1058.797
+                }
+            ]
+        },
+        {
+            "model": "lstm",
+            "backend": "AiDotNetNeuralNetwork",
+            "parameters": 24832,
+            "training": {
+                "epochSeconds": [
+                    1.603655,
+                    1.400438,
+                    1.709732
+                ],
+                "totalSeconds": 4.713862,
+                "gradientSecondsAvg": 0.077923,
+                "dataLoadingSecondsAvg": 0.000637,
+                "resources": {
+                    "managedRssMbPeak": 1721.246,
+                    "nvidiaSmiSample": null
+                }
+            },
+            "inference": [
+                {
+                    "batchSize": 1,
+                    "warmupSecondsAvg": 0.000214,
+                    "steadyStateLatencyMsAvg": 0.411,
+                    "steadyStateLatencyMsP95": 0.637,
+                    "throughputSamplesPerSecond": 2431.28,
+                    "memoryMbPeak": 1642.02
+                },
+                {
+                    "batchSize": 8,
+                    "warmupSecondsAvg": 0.000848,
+                    "steadyStateLatencyMsAvg": 1.048,
+                    "steadyStateLatencyMsP95": 1.729,
+                    "throughputSamplesPerSecond": 7629.962,
+                    "memoryMbPeak": 1636.461
+                },
+                {
+                    "batchSize": 32,
+                    "warmupSecondsAvg": 0.001808,
+                    "steadyStateLatencyMsAvg": 2.034,
+                    "steadyStateLatencyMsP95": 4.286,
+                    "throughputSamplesPerSecond": 15732.57,
+                    "memoryMbPeak": 1648.418
+                },
+                {
+                    "batchSize": 128,
+                    "warmupSecondsAvg": 0.004639,
+                    "steadyStateLatencyMsAvg": 4.715,
+                    "steadyStateLatencyMsP95": 6.069,
+                    "throughputSamplesPerSecond": 27145.83,
+                    "memoryMbPeak": 1705.191
+                }
+            ]
+        },
+        {
+            "model": "transformer",
+            "backend": "AiDotNetNeuralNetwork",
+            "parameters": 35520,
+            "training": {
+                "epochSeconds": [
+                    2.602812,
+                    1.799056,
+                    1.645819
+                ],
+                "totalSeconds": 6.047759,
+                "gradientSecondsAvg": 0.099984,
+                "dataLoadingSecondsAvg": 0.000807,
+                "resources": {
+                    "managedRssMbPeak": 2100.805,
+                    "nvidiaSmiSample": null
+                }
+            },
+            "inference": [
+                {
+                    "batchSize": 1,
+                    "warmupSecondsAvg": 0.000487,
+                    "steadyStateLatencyMsAvg": 0.763,
+                    "steadyStateLatencyMsP95": 1.441,
+                    "throughputSamplesPerSecond": 1310.678,
+                    "memoryMbPeak": 1706.996
+                },
+                {
+                    "batchSize": 8,
+                    "warmupSecondsAvg": 0.001818,
+                    "steadyStateLatencyMsAvg": 1.623,
+                    "steadyStateLatencyMsP95": 1.949,
+                    "throughputSamplesPerSecond": 4929.712,
+                    "memoryMbPeak": 1806.82
+                },
+                {
+                    "batchSize": 32,
+                    "warmupSecondsAvg": 0.003554,
+                    "steadyStateLatencyMsAvg": 3.866,
+                    "steadyStateLatencyMsP95": 4.598,
+                    "throughputSamplesPerSecond": 8276.745,
+                    "memoryMbPeak": 2142.484
+                },
+                {
+                    "batchSize": 128,
+                    "warmupSecondsAvg": 0.020729,
+                    "steadyStateLatencyMsAvg": 13.867,
+                    "steadyStateLatencyMsP95": 23.383,
+                    "throughputSamplesPerSecond": 9230.659,
+                    "memoryMbPeak": 2273.535
+                }
+            ]
+        }
+    ]
+}

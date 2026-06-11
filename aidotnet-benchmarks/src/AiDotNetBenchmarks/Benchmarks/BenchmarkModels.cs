@@ -10,10 +10,20 @@ namespace AiDotNetBenchmarks.Benchmarks;
 internal interface IBenchmarkModel
 {
     long ParameterCount { get; }
+    /// <summary>Per-sample input shape (no batch dim) — e.g. [784] or [1, 28, 28].</summary>
+    int[] SampleShape { get; }
     void LoadSyntheticBatch(int batchSize);
     void Forward();
     void Backward();
     void Step();
+    /// <summary>
+    /// Run one forward pass on the given flat input values (row-major,
+    /// [batchSize × product(SampleShape)]) and return the flat output values
+    /// ([batchSize × classes]). Used to capture the trained model's outputs on
+    /// a deterministic probe batch so the AiDotNet and PyTorch reports can be
+    /// compared value-for-value, not just by timing.
+    /// </summary>
+    float[] PredictOn(float[] flatInputs, int batchSize);
 }
 
 internal sealed class AiDotNetTensorBackend(int seed)
@@ -96,9 +106,21 @@ internal abstract class AiDotNetBenchmarkModel : IBenchmarkModel
 
     public long ParameterCount { get; }
 
+    public int[] SampleShape => InputShapePerSample;
+
     protected abstract NeuralNetworkBase<float> BuildNetwork();
     protected abstract int[] InputShapePerSample { get; }   // shape WITHOUT batch dim
     protected abstract int OutputClasses { get; }
+
+    public float[] PredictOn(float[] flatInputs, int batchSize)
+    {
+        // Always the eager Predict path (never the compiled-plan replay): the probe
+        // input is a different tensor/shape than the steady-state batch, and output
+        // capture is about values, not latency.
+        var shape = new[] { batchSize }.Concat(InputShapePerSample).ToArray();
+        var output = Network.Predict(new Tensor<float>(flatInputs, shape));
+        return output.AsSpan().ToArray();
+    }
 
     public void LoadSyntheticBatch(int batchSize)
     {
@@ -247,12 +269,23 @@ internal sealed class AiDotNetMlpFusedModel : IBenchmarkModel
 
     public long ParameterCount { get; }
 
+    public int[] SampleShape => [784];
+
     public void LoadSyntheticBatch(int batchSize)
     {
         var data = new float[batchSize * 784];
         var rng = new Random(1234);
         for (var i = 0; i < data.Length; i++) data[i] = (float)rng.NextDouble();
         _input = new Tensor<float>(data, [batchSize, 784]);
+    }
+
+    public float[] PredictOn(float[] flatInputs, int batchSize)
+    {
+        var output = AiDotNet.Tensors.Engines.AiDotNetEngine.Current.MlpForward(
+            new Tensor<float>(flatInputs, [batchSize, 784]), _weights, _biases,
+            AiDotNet.Tensors.Engines.FusedActivationType.ReLU,
+            AiDotNet.Tensors.Engines.FusedActivationType.None);
+        return output.AsSpan().ToArray();
     }
 
     public void Forward()
